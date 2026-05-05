@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA 配置，使其在 iOS 上看起来像原生应用 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="时间计划">
+    <title>时间计划控制</title>
+    <style>
+        :root {
+            --primary-color: #007AFF;
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-color: #000000;
+            --text-secondary: #8E8E93;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding-top: env(safe-area-inset-top, 44px);
+            padding-bottom: env(safe-area-inset-bottom, 34px);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 20px;
+            background: var(--card-bg);
+            border-bottom: 1px solid #E5E5EA;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .tabs {
+            display: flex;
+            padding: 15px 20px 0;
+            background: var(--card-bg);
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .task-item.completed .task-title {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .task-info {
+            flex: 1;
+        }
+
+        .task-title {
+            font-size: 17px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .task-time {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-color);
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .completed .checkbox {
+            background: var(--primary-color);
+        }
+
+        .completed .checkbox::after {
+            content: "✓";
+            color: white;
+            font-size: 14px;
+        }
+
+        .delete-btn {
+            color: #FF3B30;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            background: #FFEBEB;
+            border: none;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: var(--primary-color);
+            color: white;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,122,255,0.3);
+            border: none;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        input[type="text"], input[type="date"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #E5E5EA;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .btn-cancel {
+            background: #E5E5EA;
+            color: var(--text-color);
+        }
+
+        .btn-save {
+            background: var(--primary-color);
+            color: white;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>项目计划</h1>
+    </header>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('daily')">日计划</div>
+        <div class="tab" onclick="switchTab('monthly')">月计划</div>
+    </div>
+
+    <div class="content">
+        <ul class="task-list" id="taskList">
+            <!-- 任务将通过 JS 渲染在这里 -->
+        </ul>
+    </div>
+
+    <button class="fab" onclick="openModal()">+</button>
+
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-title">新建计划</div>
+            <input type="text" id="taskInput" placeholder="输入计划内容...">
+            <input type="date" id="dateInput">
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn btn-save" onclick="saveTask()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'daily';
+        let tasks = JSON.parse(localStorage.getItem('timeplanner_tasks')) || [];
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderTasks();
+        }
+
+        function openModal() {
+            document.getElementById('taskModal').classList.add('show');
+            document.getElementById('dateInput').valueAsDate = new Date();
+        }
+
+        function closeModal() {
+            document.getElementById('taskModal').classList.remove('show');
+            document.getElementById('taskInput').value = '';
+        }
+
+        function saveTask() {
+            const content = document.getElementById('taskInput').value;
+            const date = document.getElementById('dateInput').value;
+            
+            if (!content) return alert('请输入计划内容');
+
+            tasks.push({
+                id: Date.now(),
+                content: content,
+                date: date,
+                type: currentTab,
+                completed: false
+            });
+
+            localStorage.setItem('timeplanner_tasks', JSON.stringify(tasks));
+            closeModal();
+            renderTasks();
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                localStorage.setItem('timeplanner_tasks', JSON.stringify(tasks));
+                renderTasks();
+            }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            localStorage.setItem('timeplanner_tasks', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('taskList');
+            list.innerHTML = '';
+
+            const filteredTasks = tasks.filter(t => t.type === currentTab)
+                                       .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (filteredTasks.length === 0) {
+                list.innerHTML = '<div style="text-align:center; color:gray; margin-top:50px;">暂无计划，点击右下角添加</div>';
+                return;
+            }
+
+            filteredTasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                li.innerHTML = `
+                    <div class="checkbox" onclick="toggleTask(${task.id})"></div>
+                    <div class="task-info">
+                        <div class="task-title">${task.content}</div>
+                        <div class="task-time">${task.date}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTask(${task.id})">删除</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        // 初始渲染
+        renderTasks();
+    </script>
+</body>
+</html>
